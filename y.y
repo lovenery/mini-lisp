@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+// #include "ast.h"
 extern int yylex(void);
 extern void yyerror(char *);
 extern FILE * yyin;
@@ -10,8 +11,8 @@ extern FILE * yyin;
 int sum = 0;
 int equal_number = 0;
 struct Node {
-    char data;
-    struct Node *left, *right;
+    char data; // n: num, b: bool, N: print n, B: print b, A: AST, E: EXPS
+    struct Node *left, *right, *mid;
     int num;
 } *root;
 struct Node *newNode(struct Node *npLeft, struct Node *npRight, int num, char d) {
@@ -129,6 +130,19 @@ int orer (struct Node *np) {
     }
     return sum;
 }
+
+void debugger (struct Node* np) {
+    if (np->right != NULL) {
+        printf("Right is %c: %d\n", np->right->data, np->right->num);
+    }
+    if (np->mid != NULL) {
+        printf("Mid is %c: %d\n", np->mid->data, np->mid->num);
+    }
+    if (np->left != NULL) {
+        printf("Left is %c: %d\n", np->left->data, np->left->num);
+    }
+    printf("Sign: %c (%d)\n", np->data, np->num);
+}
 void traverseAST(struct Node *np) {
     if (np == NULL) {
         return;
@@ -136,16 +150,19 @@ void traverseAST(struct Node *np) {
     switch(np->data) {
         case 'n':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             // printf("Integer Number (n): %d\n", np->num);
             break;
         case 'b':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             // printf("Bool Number (n): %d\n", np->num);
             break;
         case '+':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             sum = 0;
             np->num = adder(np);
@@ -153,6 +170,7 @@ void traverseAST(struct Node *np) {
             break;
         case '*':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             sum = 1;
             np->num = multiplier(np);
@@ -160,36 +178,42 @@ void traverseAST(struct Node *np) {
             break;
         case '-':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             np->num = np->left->num - np->right->num;
             // printf("-: %d\n", np->num);
             break;
         case '/':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             np->num = np->left->num / np->right->num;
             // printf("/: %d\n", np->num);
             break;
         case '%':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             np->num = np->left->num % np->right->num;
             // printf("%: %d\n", np->num);
             break;
         case '>':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             np->num = np->left->num > np->right->num ? 1 : 0;
             // printf("%: %d\n", np->num);
             break;
         case '<':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             np->num = np->left->num < np->right->num ? 1 : 0;
             // printf("%: %d\n", np->num);
             break;
         case '=':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             sum = 1; // assume all same at begining
             set_equal_number(np);
@@ -199,6 +223,7 @@ void traverseAST(struct Node *np) {
             break;
         case '&':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             sum = 1;
             np->num = ander(np);
@@ -206,6 +231,7 @@ void traverseAST(struct Node *np) {
             break;
         case '|':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             sum = 0;
             np->num = orer(np);
@@ -213,41 +239,44 @@ void traverseAST(struct Node *np) {
             break;
         case '~':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             np->num = ! np->left->num;
             // printf("~: %d\n", np->num);
             break;
         case 'N':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             np->num = np->left->num;
             // printf("N: %d\n", np->num);
             break;
         case 'B':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
             np->num = np->left->num;
             // printf("B: %d\n", np->num);
             break;
-        default:
+        case '?':
             traverseAST(np->left);
+            traverseAST(np->mid);
             traverseAST(np->right);
-            // if (np->right != NULL) {
-            //     printf("Right is %c: %d\n", np->right->data, np->right->num);
-            // }
-            // if (np->left != NULL) {
-            //     printf("Left is %c: %d\n", np->left->data, np->left->num);
-            // }
+            if (np->left->num == 1) {
+                np->num = np->mid->num;
+            } else {
+                np->num = np->right->num;
+            }
+            // printf("?: %d\n", np->num);
+            break;
+        default: // 'A', 'E'
+            traverseAST(np->left);
+            traverseAST(np->mid);
+            traverseAST(np->right);
             // printf("Sign: %c (%d)\n", np->data, np->num);
             break;
     }
-    // if (np->right != NULL) {
-    //     printf("Right is %c: %d\n", np->right->data, np->right->num);
-    // }
-    // if (np->left != NULL) {
-    //     printf("Left is %c: %d\n", np->left->data, np->left->num);
-    // }
-    // printf("Sign: %c (%d)\n", np->data, np->num);
+    // debugger(np);
 }
 void freeAST(struct Node* np) { // free with postorder
     if (np != NULL) {
@@ -284,15 +313,15 @@ void printAnswer(struct Node *np) {
     int f, b;
     struct Node *np;
 }
-%token print_num mod print_bool and or not
+%token print_num mod print_bool and or not _if
 %token <f> number
 %token <b> bool_val
-%type <np> PORGRAM STMT STMTS PRINT_STMT EXPS EXP NUM_OP LOG_OP
+%type <np> PORGRAM STMT STMTS PRINT_STMT EXPS EXP NUM_OP LOG_OP IF_EXP TEST_EXP THEN_EXP ELSE_EXP
 %%
 
 
 PORGRAM         :   STMTS                   { root = $1; }
-STMTS           :   STMT STMTS              { $$ = newNode($1, $2, 0, 'a'); }
+STMTS           :   STMT STMTS              { $$ = newNode($1, $2, 0, 'A'); }
                 |   STMT                    { $$ = $1; }
                 ;
 
@@ -312,6 +341,7 @@ EXP             :   number                  { $$ = newNode(NULL, NULL, $1, 'n');
                 |   bool_val                { $$ = newNode(NULL, NULL, $1, 'b'); }
                 |   NUM_OP                  { $$ = $1; }
                 |   LOG_OP                  { $$ = $1; }
+                |   IF_EXP                  { $$ = $1; }
                 ;
 
 NUM_OP          :   '(' '+' EXPS ')'        { $$ = newNode($3, NULL, 0, '+'); }
@@ -328,6 +358,17 @@ LOG_OP          :   '(' and EXP EXPS ')'    { $$ = newNode($3, $4, 0, '&'); }
                 |   '(' or EXP EXPS ')'     { $$ = newNode($3, $4, 0, '|'); }
                 |   '(' not EXP ')'         { $$ = newNode($3, NULL, 0, '~'); }
                 ;
+
+IF_EXP          :   '(' _if TEST_EXP THEN_EXP ELSE_EXP ')' { $$ = newNode($3, $5, 0, '?'); $$->mid = $4; }
+                ;
+TEST_EXP        :   EXP                     { $$ = $1; }
+                ;
+THEN_EXP        :   EXP                     { $$ = $1; }
+                ;
+ELSE_EXP        :   EXP                     { $$ = $1; }
+                ;
+
+
 %%
 int main(int argc, char *argv[]) {
     yyin = fopen(argv[1], "r");

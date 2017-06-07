@@ -24,6 +24,7 @@ bool_val    #[t|f]
 "and"           { return and; }
 "or"            { return or; }
 "not"           { return not; }
+"if"            { return _if; }
 .               { printf("unexpected char: %s\n", yytext); }
 %%
 
