@@ -358,59 +358,59 @@ void printAnswer(struct Node *np) {
 %%
 
 
-PORGRAM         :   STMTS                   { root = $1; }
-STMTS           :   STMT STMTS              { $$ = newNode($1, $2, 0, 'A'); }
-                |   STMT                    { $$ = $1; }
+PORGRAM         :   STMTS                                   { root = $1; }
+                ;
+STMTS           :   STMT STMTS                              { $$ = newNode($1, $2, 0, 'A'); }
+                |   STMT                                    { $$ = $1; }
                 ;
 
-STMT            :   EXP                     { $$ = $1; }
-                |   PRINT_STMT              { $$ = $1; }
-                |   DEF_STMT                { $$ = $1; }
+STMT            :   EXP                                     { $$ = $1; }
+                |   PRINT_STMT                              { $$ = $1; }
+                |   DEF_STMT                                { $$ = $1; }
                 ;
 
-PRINT_STMT      :   '(' print_num EXP ')'   { $$ = newNode($3, NULL, $3->num, 'N'); }
-                |   '(' print_bool EXP ')'  { $$ = newNode($3, NULL, $3->num, 'B'); }
+PRINT_STMT      :   '(' print_num EXP ')'                   { $$ = newNode($3, NULL, $3->num, 'N'); }
+                |   '(' print_bool EXP ')'                  { $$ = newNode($3, NULL, $3->num, 'B'); }
                 ;
 
-EXPS            :   EXP EXPS                { $$ = newNode($1, $2, 0, 'E'); }
-                |   EXP                     { $$ = $1; }
+EXPS            :   EXP EXPS                                { $$ = newNode($1, $2, 0, 'E'); }
+                |   EXP                                     { $$ = $1; }
+                ;
+EXP             :   number                                  { $$ = newNode(NULL, NULL, $1, 'n'); }
+                |   bool_val                                { $$ = newNode(NULL, NULL, $1, 'b'); }
+                |   NUM_OP                                  { $$ = $1; }
+                |   LOG_OP                                  { $$ = $1; }
+                |   IF_EXP                                  { $$ = $1; }
+                |   VARIABLE                                { $$ = $1; }
                 ;
 
-EXP             :   number                  { $$ = newNode(NULL, NULL, $1, 'n'); }
-                |   bool_val                { $$ = newNode(NULL, NULL, $1, 'b'); }
-                |   NUM_OP                  { $$ = $1; }
-                |   LOG_OP                  { $$ = $1; }
-                |   IF_EXP                  { $$ = $1; }
-                |   VARIABLE                { $$ = $1; }
+NUM_OP          :   '(' '+' EXPS ')'                        { $$ = newNode($3, NULL, 0, '+'); }
+                |   '(' '-' EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '-'); }
+                |   '(' '*' EXPS ')'                        { $$ = newNode($3, NULL, 0, '*'); }
+                |   '(' '/' EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '/'); }
+                |   '(' mod EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '%'); }
+                |   '(' '>' EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '>'); }
+                |   '(' '<' EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '<'); }
+                |   '(' '=' EXPS ')'                        { $$ = newNode($3, NULL, 0, '='); }
                 ;
 
-NUM_OP          :   '(' '+' EXPS ')'        { $$ = newNode($3, NULL, 0, '+'); }
-                |   '(' '-' EXP EXP  ')'    { $$ = newNode($3, $4, 0, '-'); }
-                |   '(' '*' EXPS ')'        { $$ = newNode($3, NULL, 0, '*'); }
-                |   '(' '/' EXP EXP  ')'    { $$ = newNode($3, $4, 0, '/'); }
-                |   '(' mod EXP EXP  ')'    { $$ = newNode($3, $4, 0, '%'); }
-                |   '(' '>' EXP EXP  ')'    { $$ = newNode($3, $4, 0, '>'); }
-                |   '(' '<' EXP EXP  ')'    { $$ = newNode($3, $4, 0, '<'); }
-                |   '(' '=' EXPS ')'        { $$ = newNode($3, NULL, 0, '='); }
+LOG_OP          :   '(' and EXP EXPS ')'                    { $$ = newNode($3, $4, 0, '&'); }
+                |   '(' or EXP EXPS ')'                     { $$ = newNode($3, $4, 0, '|'); }
+                |   '(' not EXP ')'                         { $$ = newNode($3, NULL, 0, '~'); }
                 ;
 
-LOG_OP          :   '(' and EXP EXPS ')'    { $$ = newNode($3, $4, 0, '&'); }
-                |   '(' or EXP EXPS ')'     { $$ = newNode($3, $4, 0, '|'); }
-                |   '(' not EXP ')'         { $$ = newNode($3, NULL, 0, '~'); }
+DEF_STMT        :   '(' _define VARIABLE EXP ')'            { $$ = newNode($3, $4, 0, 'D'); }
+                ;
+VARIABLE        :   id                                      { $$ = newNode(NULL, NULL, 0, 'V'); $$->name = $1; }
                 ;
 
-DEF_STMT        :   '(' _define VARIABLE EXP ')'    { $$ = newNode($3, $4, 0, 'D'); }
+IF_EXP          :   '(' _if TEST_EXP THEN_EXP ELSE_EXP ')'  { $$ = newNode($3, $5, 0, '?'); $$->mid = $4; }
                 ;
-VARIABLE        :   id                              { $$ = newNode(NULL, NULL, 0, 'V'); $$->name = $1; }
+TEST_EXP        :   EXP                                     { $$ = $1; }
                 ;
-
-IF_EXP          :   '(' _if TEST_EXP THEN_EXP ELSE_EXP ')' { $$ = newNode($3, $5, 0, '?'); $$->mid = $4; }
+THEN_EXP        :   EXP                                     { $$ = $1; }
                 ;
-TEST_EXP        :   EXP                     { $$ = $1; }
-                ;
-THEN_EXP        :   EXP                     { $$ = $1; }
-                ;
-ELSE_EXP        :   EXP                     { $$ = $1; }
+ELSE_EXP        :   EXP                                     { $$ = $1; }
                 ;
 
 
