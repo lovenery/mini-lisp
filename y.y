@@ -1,6 +1,7 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 // #include "ast.h"
 extern int yylex(void);
@@ -8,12 +9,29 @@ extern void yyerror(char *);
 extern FILE * yyin;
 
 // global variables
+int table_index = 0;
+struct table {
+    char *type;
+    char *name;
+    int value;
+} table[100];
+int searchTable (char* s) {
+    int i;
+    for (i = 0; i < table_index; i++) {
+        if (strcmp(table[i].name, s) == 0) {
+            return table[i].value;
+        }
+    }
+    return -1;
+    // printf("Undefined Variable: %s\n", s);
+}
 int sum = 0;
 int equal_number = 0;
 struct Node {
-    char data; // n: num, b: bool, N: print n, B: print b, A: AST, E: EXPS
+    char data; // n: num, b: bool, N: print n, B: print b, A: AST, E: EXPS, D: define, V: VARIABLE
     struct Node *left, *right, *mid;
     int num;
+    char* name;
 } *root;
 struct Node *newNode(struct Node *npLeft, struct Node *npRight, int num, char d) {
     struct Node *np = (struct Node *) malloc( sizeof(struct Node) );
@@ -130,7 +148,6 @@ int orer (struct Node *np) {
     }
     return sum;
 }
-
 void debugger (struct Node* np) {
     if (np->right != NULL) {
         printf("Right is %c: %d\n", np->right->data, np->right->num);
@@ -269,6 +286,23 @@ void traverseAST(struct Node *np) {
             }
             // printf("?: %d\n", np->num);
             break;
+        case 'D':
+            traverseAST(np->left);
+            traverseAST(np->mid);
+            traverseAST(np->right);
+            // store Table value
+            table[table_index].name = np->left->name;
+            table[table_index].value = np->right->num;
+            // printf("//Define: %s is %d;\n", table[table_index].name, table[table_index].value);
+            table_index++;
+            break;
+        case 'V':
+            traverseAST(np->left);
+            traverseAST(np->mid);
+            traverseAST(np->right);
+            np->num = searchTable(np->name); // get Table value
+            // printf("//Var %s: %d\n", np->name, np->num);
+            break;
         default: // 'A', 'E'
             traverseAST(np->left);
             traverseAST(np->mid);
@@ -310,13 +344,17 @@ void printAnswer(struct Node *np) {
 }
 %}
 %union {
+    char *s;
     int f, b;
     struct Node *np;
 }
-%token print_num mod print_bool and or not _if
+%token print_num mod print_bool and or not _if _define
 %token <f> number
 %token <b> bool_val
-%type <np> PORGRAM STMT STMTS PRINT_STMT EXPS EXP NUM_OP LOG_OP IF_EXP TEST_EXP THEN_EXP ELSE_EXP
+%token <s> id
+%type <np> PORGRAM STMT STMTS PRINT_STMT EXPS EXP NUM_OP LOG_OP
+%type <np> IF_EXP TEST_EXP THEN_EXP ELSE_EXP
+%type <np> DEF_STMT VARIABLE
 %%
 
 
@@ -327,6 +365,7 @@ STMTS           :   STMT STMTS              { $$ = newNode($1, $2, 0, 'A'); }
 
 STMT            :   EXP                     { $$ = $1; }
                 |   PRINT_STMT              { $$ = $1; }
+                |   DEF_STMT                { $$ = $1; }
                 ;
 
 PRINT_STMT      :   '(' print_num EXP ')'   { $$ = newNode($3, NULL, $3->num, 'N'); }
@@ -342,6 +381,7 @@ EXP             :   number                  { $$ = newNode(NULL, NULL, $1, 'n');
                 |   NUM_OP                  { $$ = $1; }
                 |   LOG_OP                  { $$ = $1; }
                 |   IF_EXP                  { $$ = $1; }
+                |   VARIABLE                { $$ = $1; }
                 ;
 
 NUM_OP          :   '(' '+' EXPS ')'        { $$ = newNode($3, NULL, 0, '+'); }
@@ -357,6 +397,11 @@ NUM_OP          :   '(' '+' EXPS ')'        { $$ = newNode($3, NULL, 0, '+'); }
 LOG_OP          :   '(' and EXP EXPS ')'    { $$ = newNode($3, $4, 0, '&'); }
                 |   '(' or EXP EXPS ')'     { $$ = newNode($3, $4, 0, '|'); }
                 |   '(' not EXP ')'         { $$ = newNode($3, NULL, 0, '~'); }
+                ;
+
+DEF_STMT        :   '(' _define VARIABLE EXP ')'    { $$ = newNode($3, $4, 0, 'D'); }
+                ;
+VARIABLE        :   id                              { $$ = newNode(NULL, NULL, 0, 'V'); $$->name = $1; }
                 ;
 
 IF_EXP          :   '(' _if TEST_EXP THEN_EXP ELSE_EXP ')' { $$ = newNode($3, $5, 0, '?'); $$->mid = $4; }
