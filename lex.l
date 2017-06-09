@@ -24,9 +24,10 @@ bool_val    #[t|f]
 "not"           { return not; }
 "if"            { return _if; }
 "define"        { return _define; }
+"fun"           { return fun; }
 {number}        { yylval.f = atoi(yytext); return number; }
 {bool_val}      { yylval.b = (yytext[1] == 't') ? 1 : 0 ; return bool_val; }
-{id}            { yylval.s = strdup(yytext); return id; }
+{id}*           { yylval.s = strdup(yytext); return id; }
 .               { printf("unexpected char: %s\n", yytext); }
 %%
 
