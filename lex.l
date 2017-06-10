@@ -10,7 +10,7 @@ separator   [ \t\n\r]
 letter      [a-z]
 digit       [0-9]
 number      0|[1-9]{digit}*|-[1-9]{digit}*
-id          {letter}({letter}|{digit}|'-')*
+id          {letter}[{letter}{digit}-]*
 bool_val    #[t|f]
 %%
 <<EOF>>         { return 0; }

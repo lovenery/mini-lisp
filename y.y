@@ -9,18 +9,18 @@ extern void yyerror(char *);
 extern FILE * yyin;
 
 // global variables
-int table_index = 0;
+int var_table_index = 0;
 struct Table {
     char *type;
     char *name;
     int value;
     int inFun;
-} table[100];
+} var_table[100];
 int searchTable (char* s, int inFun) {
     int i;
-    for (i = 0; i < table_index; i++) {
-        if (table[i].inFun == inFun && strcmp(table[i].name, s) == 0) {
-            return table[i].value;
+    for (i = 0; i < var_table_index; i++) {
+        if (var_table[i].inFun == inFun && strcmp(var_table[i].name, s) == 0) {
+            return var_table[i].value;
         }
     }
     return -1;
@@ -186,25 +186,29 @@ void storeParmsToTmpTable (struct Node * np) {
 void bindParams (struct Node * np) {
     if (np->left != NULL) {
         if (np->left->data == 'V') {
-            table[table_index].name = np->left->name;
-            table[table_index].value = tmp_table[tmpTableIndex++].value;
-            table[table_index].inFun = 1;
-            table_index++;
+            var_table[var_table_index].name = np->left->name;
+            var_table[var_table_index].value = tmp_table[tmpTableIndex++].value;
+            var_table[var_table_index].inFun = 1;
+            // printf("hi? %s: %d\n", var_table[var_table_index].name, var_table[var_table_index].value);
+            var_table_index++;
             np->left->inFun = 1;
         }
         bindParams(np->left);
     }
     if (np->right != NULL) {
         if (np->right->data == 'V') {
-            table[table_index].name = np->right->name;
-            table[table_index].value = tmp_table[tmpTableIndex++].value;
-            table[table_index].inFun = 1;
-            table_index++;
+            var_table[var_table_index].name = np->right->name;
+            var_table[var_table_index].value = tmp_table[tmpTableIndex++].value;
+            var_table[var_table_index].inFun = 1;
+            // printf("hi? %s: %d\n", var_table[var_table_index].name, var_table[var_table_index].value);
+            var_table_index++;
             np->right->inFun = 1;
         }
         bindParams(np->right);
     }
 }
+struct Node *funNodes[100];
+int funNodesIndex = 0;
 void traverseAST(struct Node *np) {
     if (np == NULL) {
         return;
@@ -335,11 +339,21 @@ void traverseAST(struct Node *np) {
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
-            // store Table value
-            table[table_index].name = np->left->name;
-            table[table_index].value = np->right->num;
-            // printf("//Define: %s is %d;\n", table[table_index].name, table[table_index].value);
-            table_index++;
+            // Function but no params
+            if (np->right->data == 'F' && np->right->left->data == 'X') {
+                var_table[var_table_index].name = np->left->name; // V
+                var_table[var_table_index].value = np->right->right->num; // EXP
+                var_table_index++;
+            } else if (np->right->data == 'F') { // normal function
+                funNodes[funNodesIndex++] = np;
+                // printf("// Define Function: %s\n", funNodes[funNodesIndex-1]->left->name);
+            } else { // normal variable
+                // store Table value
+                var_table[var_table_index].name = np->left->name;
+                var_table[var_table_index].value = np->right->num;
+                // printf("//Define: %s is %d;\n", var_table[var_table_index].name, var_table[var_table_index].value);
+                var_table_index++;
+            }
             break;
         case 'V':
             traverseAST(np->left);
@@ -364,12 +378,46 @@ void traverseAST(struct Node *np) {
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
-            table_index -= hoisting; // after travel, remove binding prevent hoisting
+            var_table_index -= hoisting; // after travel, remove binding prevent hoisting
             if (np->left->right == NULL) {
                 printf("GG lemon\n");
             }
             np->num = np->left->right->num;
             break;
+        case 'C': {
+            // pass function to be a param
+            // np->left: f (X,X)
+            // np->right: P
+            // np->right->left: C // normal is P or n
+            // np->right->right: X // normal is P or n
+            // np->right->left->left: f
+            // np->right->left->right: X
+            if (np->right->left->data == 'C') {
+                np->right->left->data = 'n'; // Change 'C' to 'n', not Call anymore
+                np->right->left->num = searchTable(np->right->left->left->name, 0);
+            }
+            // ---------------------------------
+            // normal pass parms
+            int i;
+            int tmp = 0;
+            for(i = 0; i < funNodesIndex; i++) {
+                if (np->left->name == funNodes[i]->name) {
+                    tmp = i;
+                }
+            }
+            // printf("// Call Function: %s \n", funNodes[tmp]->left->name);
+            tmpTableIndex = 0; // init
+            storeParmsToTmpTable(np->right); // P
+            int hoisting = tmpTableIndex;
+            tmpTableIndex = 0; // init
+            bindParams(funNodes[tmp]->right); // bind variables before travel childs
+            traverseAST(funNodes[tmp]->left);
+            traverseAST(funNodes[tmp]->right);
+            var_table_index -= hoisting; // after travel, remove binding prevent hoisting
+            np->num = funNodes[tmp]->right->right->num;
+            // no need to travel other nodes
+            break;
+        }
         default: // 'A', 'E'
             traverseAST(np->left);
             traverseAST(np->mid);
@@ -409,6 +457,33 @@ void printAnswer(struct Node *np) {
             break;
     }
 }
+
+void TopDownDebugger(struct Node *np) {
+    if (np == NULL) {
+        return;
+    }
+    switch(np->data) {
+        default:
+            //printf("%c, %d\n", np->data, np->num);
+            if (np->name != NULL && strcmp(np->name, "") != 0) {
+                printf("Name is %s, ", np->name);
+            }
+            printf("Sign: %c (%d)\n", np->data, np->num);
+            if (np->left != NULL) {
+                printf("-- Left is %c: %d\n", np->left->data, np->left->num);
+            }
+            if (np->mid != NULL) {
+                printf("-- Mid is %c: %d\n", np->mid->data, np->mid->num);
+            }
+            if (np->right != NULL) {
+                printf("-- Right is %c: %d\n", np->right->data, np->right->num);
+            }
+            printf("------------\n");
+            TopDownDebugger(np->left);
+            TopDownDebugger(np->right);
+            break;
+    }
+}
 %}
 %union {
     char *s;
@@ -422,7 +497,7 @@ void printAnswer(struct Node *np) {
 %type <np> PORGRAM STMT STMTS PRINT_STMT EXPS EXP NUM_OP LOG_OP
 %type <np> IF_EXP TEST_EXP THEN_EXP ELSE_EXP
 %type <np> DEF_STMT VARIABLE
-%type <np> FUN_EXP FUN_IDs FUN_BODY FUN_CALL PARAMS PARAM
+%type <np> FUN_EXP FUN_IDs FUN_BODY FUN_CALL PARAMS PARAM FUN_NAME VARIABLES
 %%
 
 
@@ -485,17 +560,24 @@ ELSE_EXP        :   EXP                                     { $$ = $1; }
 
 FUN_EXP         :   '(' fun FUN_IDs FUN_BODY ')'            { $$ = newNode($3, $4, 0, 'F'); }
                 ;
-FUN_IDs         :   '(' EXPS ')'                            { $$ = $2; }
+FUN_IDs         :   '(' VARIABLES ')'                       { $$ = $2; }
                 ;
+VARIABLES       :   VARIABLES VARIABLE                      { $$ = newNode($1, $2, 0, 'E'); }
+                |   /* empty */                             { $$ = newNode(NULL, NULL, 0, 'X'); }
+                ;
+
 FUN_BODY        :   EXP                                     { $$ = $1; }
                 ;
 
 FUN_CALL        :   '(' FUN_EXP PARAMS ')'                  { $$ = newNode($2, $3, 0, 'c'); }
+                |   '(' FUN_NAME PARAMS ')'                 { $$ = newNode($2, $3, 0, 'C'); }
                 ;
 PARAMS          :   PARAM PARAMS                            { $$ = newNode($1, $2, 0, 'P'); }
-                |   PARAM                                   { $$ = $1; }
+                |   /* empty */                             { $$ = newNode(NULL, NULL, 0, 'X'); }
                 ;
 PARAM           :   EXP                                     { $$ = $1; }
+                ;
+FUN_NAME        :   id                                      { $$ = newNode(NULL, NULL, 0, 'f'); $$->name = $1; }
                 ;
 %%
 int main(int argc, char *argv[]) {
@@ -504,6 +586,7 @@ int main(int argc, char *argv[]) {
     fclose(yyin);
 
     // if(a == 0) {
+    // TopDownDebugger(root);
         traverseAST(root);
         printAnswer(root);
         freeAST(root);
@@ -513,8 +596,8 @@ int main(int argc, char *argv[]) {
 
     // printf("\nVariables Table:\n");
     // int i;
-    // for (i = 0; i < table_index; i++) {
-    //     printf("%s: %d (in Function: %d)\n", table[i].name, table[i].value, table[i].inFun);
+    // for (i = 0; i < var_table_index; i++) {
+    //     printf("%s: %d (in Function: %d)\n", var_table[i].name, var_table[i].value, var_table[i].inFun);
     // }
 
     return 0;
