@@ -7,34 +7,19 @@
 extern int yylex(void);
 extern void yyerror(char *);
 extern FILE * yyin;
+////////////////////////////
 
-// global variables
-int var_table_index = 0;
-struct Table {
-    char *type;
-    char *name;
-    int value;
-    int inFun;
-} var_table[100];
-int searchTable (char* s, int inFun) {
-    int i;
-    for (i = 0; i < var_table_index; i++) {
-        if (var_table[i].inFun == inFun && strcmp(var_table[i].name, s) == 0) {
-            return var_table[i].value;
-        }
-    }
-    return -1;
-    // printf("Undefined Variable: %s\n", s);
-}
-int sum = 0;
-int equal_number = 0;
+// Nodes
 struct Node {
     char data; // n: num, b: bool, N: print n, B: print b, A: AST, E: EXPS, D: define, V: VARIABLE
     struct Node *left, *right, *mid;
     int num;
     char* name;
     int inFun;
-} *root;
+};
+struct Node *root;
+int funNodesIndex = 0;
+struct Node *funNodes[100]; // store functions node
 struct Node *newNode(struct Node *npLeft, struct Node *npRight, int num, char d) {
     struct Node *np = (struct Node *) malloc( sizeof(struct Node) );
     np->num = num;
@@ -46,6 +31,9 @@ struct Node *newNode(struct Node *npLeft, struct Node *npRight, int num, char d)
     return np;
 }
 
+// Operations
+int sum = 0;
+int equal_number = 0;
 int adder (struct Node *np) {
     if (np->left != NULL) {
         sum += np->left->num;
@@ -152,23 +140,30 @@ int orer (struct Node *np) {
     }
     return sum;
 }
-void debugger (struct Node* np) {
-    if (np->left != NULL) {
-        printf("-- Left is %c: %d\n", np->left->data, np->left->num);
-    }
-    if (np->mid != NULL) {
-        printf("-- Mid is %c: %d\n", np->mid->data, np->mid->num);
-    }
-    if (np->right != NULL) {
-        printf("-- Right is %c: %d\n", np->right->data, np->right->num);
-    }
-    if (np->name != NULL && strcmp(np->name, "") != 0) {
-        printf("Name is %s, ", np->name);
-    }
-    printf("Sign: %c (%d)\n", np->data, np->num);
-}
+
+// Tables
+struct Table {
+    char *type;
+    char *name;
+    int value;
+    int inFun;
+};
+// normal var, no param function
+int var_table_index = 0;
+struct Table var_table[100];
+// function scope variable
 int tmpTableIndex = 0;
 struct Table tmp_table[100];
+int searchTable (char* s, int inFun) {
+    int i;
+    for (i = 0; i < var_table_index; i++) {
+        if (var_table[i].inFun == inFun && strcmp(var_table[i].name, s) == 0) {
+            return var_table[i].value;
+        }
+    }
+    return -1;
+    // printf("Undefined Variable: %s\n", s);
+}
 void storeParmsToTmpTable (struct Node * np) {
     if (np->left != NULL && np->left->data != 'F') {
         if (np->left->data == 'n') {
@@ -207,8 +202,8 @@ void bindParams (struct Node * np) {
         bindParams(np->right);
     }
 }
-struct Node *funNodes[100];
-int funNodesIndex = 0;
+
+// Main
 void traverseAST(struct Node *np) {
     if (np == NULL) {
         return;
@@ -458,6 +453,22 @@ void printAnswer(struct Node *np) {
     }
 }
 
+// Debuggers
+void debugger (struct Node* np) {
+    if (np->left != NULL) {
+        printf("-- Left is %c: %d\n", np->left->data, np->left->num);
+    }
+    if (np->mid != NULL) {
+        printf("-- Mid is %c: %d\n", np->mid->data, np->mid->num);
+    }
+    if (np->right != NULL) {
+        printf("-- Right is %c: %d\n", np->right->data, np->right->num);
+    }
+    if (np->name != NULL && strcmp(np->name, "") != 0) {
+        printf("Name is %s, ", np->name);
+    }
+    printf("Sign: %c (%d)\n", np->data, np->num);
+}
 void TopDownDebugger(struct Node *np) {
     if (np == NULL) {
         return;
