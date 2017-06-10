@@ -2,14 +2,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-// #include "ast.h"
+// #include <ctype.h> // TODO: Type Checking
 extern int yylex(void);
 extern void yyerror(char *);
 extern FILE * yyin;
-////////////////////////////
 
 // Nodes
+#define AST_STMTS 'A'
+#define AST_NUM 'n'
+#define AST_BOOL 'b'
+#define AST_EXPRS 'E'
+#define AST_PRINT_NUM 'N'
+#define AST_PRINT_BOOL 'B'
+#define AST_DEFINE 'D'
+#define AST_VAR 'V'
+#define AST_FUN 'F'
+#define AST_FUN_NAME 'f'
+#define AST_FUN_NULL 'X'
+#define AST_CALL_ANONYNOUS 'c'
+#define AST_CALL_NAMED 'C'
 struct Node {
     char data; // n: num, b: bool, N: print n, B: print b, A: AST, E: EXPS, D: define, V: VARIABLE
     struct Node *left, *right, *mid;
@@ -37,13 +48,13 @@ int equal_number = 0;
 int adder (struct Node *np) {
     if (np->left != NULL) {
         sum += np->left->num;
-        if (np->left->data == 'E' || np->left->data == 'n') {
+        if (np->left->data == AST_EXPRS || np->left->data == AST_NUM) {
             adder(np->left);
         }
     }
     if (np->right != NULL) {
         sum += np->right->num;
-        if (np->right->data == 'E' || np->right->data == 'n') {
+        if (np->right->data == AST_EXPRS || np->right->data == AST_NUM) {
             adder(np->right);
         }
     }
@@ -51,18 +62,18 @@ int adder (struct Node *np) {
 }
 int multiplier (struct Node *np) {
     if (np->left != NULL) {
-        if (np->left->data != 'E') {
+        if (np->left->data != AST_EXPRS) {
             sum *= np->left->num;
         }
-        if (np->left->data == 'E' || np->left->data == 'n') {
+        if (np->left->data == AST_EXPRS || np->left->data == AST_NUM) {
             multiplier(np->left);
         }
     }
     if (np->right != NULL) {
-        if (np->right->data != 'E') {
+        if (np->right->data != AST_EXPRS) {
             sum *= np->right->num;
         }
-        if (np->right->data == 'E' || np->right->data == 'n') {
+        if (np->right->data == AST_EXPRS || np->right->data == AST_NUM) {
             multiplier(np->right);
         }
     }
@@ -70,14 +81,14 @@ int multiplier (struct Node *np) {
 }
 void set_equal_number (struct Node *np) {
     if (np->left != NULL) {
-        if (np->left->data != 'E') {
+        if (np->left->data != AST_EXPRS) {
             equal_number = np->left->num;
         } else {
             set_equal_number(np->left);
         }
     }
     if (np->right != NULL) {
-        if (np->right->data != 'E') {
+        if (np->right->data != AST_EXPRS) {
             equal_number = np->right->num;
         } else {
             set_equal_number(np->right);
@@ -86,15 +97,15 @@ void set_equal_number (struct Node *np) {
 }
 int equaler (struct Node *np) {
     if (np->left != NULL) {
-        if (np->left->data != 'E') {
+        if (np->left->data != AST_EXPRS) {
             sum = (np->left->num == equal_number) ? sum : 0;
         } else {
-            // if (np->left->data == 'E' || np->left->data == 'n')
+            // if (np->left->data == AST_EXPRS || np->left->data == AST_NUM)
             equaler(np->left);
         }
     }
     if (np->right != NULL) {
-        if (np->right->data != 'E') {
+        if (np->right->data != AST_EXPRS) {
             sum = (np->right->num == equal_number) ? sum : 0;
         } else {
             equaler(np->right);
@@ -104,18 +115,18 @@ int equaler (struct Node *np) {
 }
 int ander (struct Node *np) {
     if (np->left != NULL) {
-        if (np->left->data != 'E') {
+        if (np->left->data != AST_EXPRS) {
             sum = sum & np->left->num;
         }
-        if (np->left->data == 'E' || np->left->data == 'b') {
+        if (np->left->data == AST_EXPRS || np->left->data == AST_BOOL) {
             ander(np->left);
         }
     }
     if (np->right != NULL) {
-        if (np->right->data != 'E') {
+        if (np->right->data != AST_EXPRS) {
             sum = sum & np->right->num;
         }
-        if (np->right->data == 'E' || np->right->data == 'b') {
+        if (np->right->data == AST_EXPRS || np->right->data == AST_BOOL) {
             ander(np->right);
         }
     }
@@ -123,18 +134,18 @@ int ander (struct Node *np) {
 }
 int orer (struct Node *np) {
     if (np->left != NULL) {
-        if (np->left->data != 'E') {
+        if (np->left->data != AST_EXPRS) {
             sum = sum | np->left->num;
         }
-        if (np->left->data == 'E' || np->left->data == 'b') {
+        if (np->left->data == AST_EXPRS || np->left->data == AST_BOOL) {
             orer(np->left);
         }
     }
     if (np->right != NULL) {
-        if (np->right->data != 'E') {
+        if (np->right->data != AST_EXPRS) {
             sum = sum | np->right->num;
         }
-        if (np->right->data == 'E' || np->right->data == 'b') {
+        if (np->right->data == AST_EXPRS || np->right->data == AST_BOOL) {
             orer(np->right);
         }
     }
@@ -143,7 +154,7 @@ int orer (struct Node *np) {
 
 // Tables
 struct Table {
-    char *type;
+    char *type; // TODO: Type Checking
     char *name;
     int value;
     int inFun;
@@ -165,14 +176,14 @@ int searchTable (char* s, int inFun) {
     // printf("Undefined Variable: %s\n", s);
 }
 void storeParmsToTmpTable (struct Node * np) {
-    if (np->left != NULL && np->left->data != 'F') {
-        if (np->left->data == 'n') {
+    if (np->left != NULL && np->left->data != AST_FUN) {
+        if (np->left->data == AST_NUM) {
             tmp_table[tmpTableIndex++].value = np->left->num;
         }
         storeParmsToTmpTable(np->left);
     }
-    if (np->right != NULL && np->right->data != 'F') {
-        if (np->right->data == 'n') {
+    if (np->right != NULL && np->right->data != AST_FUN) {
+        if (np->right->data == AST_NUM) {
             tmp_table[tmpTableIndex++].value = np->right->num;
         }
         storeParmsToTmpTable(np->right);
@@ -180,7 +191,7 @@ void storeParmsToTmpTable (struct Node * np) {
 }
 void bindParams (struct Node * np) {
     if (np->left != NULL) {
-        if (np->left->data == 'V') {
+        if (np->left->data == AST_VAR) {
             var_table[var_table_index].name = np->left->name;
             var_table[var_table_index].value = tmp_table[tmpTableIndex++].value;
             var_table[var_table_index].inFun = 1;
@@ -191,7 +202,7 @@ void bindParams (struct Node * np) {
         bindParams(np->left);
     }
     if (np->right != NULL) {
-        if (np->right->data == 'V') {
+        if (np->right->data == AST_VAR) {
             var_table[var_table_index].name = np->right->name;
             var_table[var_table_index].value = tmp_table[tmpTableIndex++].value;
             var_table[var_table_index].inFun = 1;
@@ -209,13 +220,13 @@ void traverseAST(struct Node *np) {
         return;
     }
     switch(np->data) {
-        case 'n':
+        case AST_NUM:
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
             // printf("Integer Number (n): %d\n", np->num);
             break;
-        case 'b':
+        case AST_BOOL:
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
@@ -305,14 +316,14 @@ void traverseAST(struct Node *np) {
             np->num = ! np->left->num;
             // printf("~: %d\n", np->num);
             break;
-        case 'N':
+        case AST_PRINT_NUM:
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
             np->num = np->left->num;
             // printf("N: %d\n", np->num);
             break;
-        case 'B':
+        case AST_PRINT_BOOL:
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
@@ -330,16 +341,16 @@ void traverseAST(struct Node *np) {
             }
             // printf("?: %d\n", np->num);
             break;
-        case 'D':
+        case AST_DEFINE:
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
             // Function but no params
-            if (np->right->data == 'F' && np->right->left->data == 'X') {
+            if (np->right->data == AST_FUN && np->right->left->data == AST_FUN_NULL) {
                 var_table[var_table_index].name = np->left->name; // V
                 var_table[var_table_index].value = np->right->right->num; // EXP
                 var_table_index++;
-            } else if (np->right->data == 'F') { // normal function
+            } else if (np->right->data == AST_FUN) { // normal function
                 funNodes[funNodesIndex++] = np;
                 // printf("// Define Function: %s\n", funNodes[funNodesIndex-1]->left->name);
             } else { // normal variable
@@ -350,21 +361,21 @@ void traverseAST(struct Node *np) {
                 var_table_index++;
             }
             break;
-        case 'V':
+        case AST_VAR:
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
             np->num = searchTable(np->name, np->inFun); // get Table value
             // printf("//Var %s: %d\n", np->name, np->num);
             break;
-        case 'F':
+        case AST_FUN:
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
             // params: np->left->name;
             // exprs: np->right;
             break;
-        case 'c':
+        case AST_CALL_ANONYNOUS:
             tmpTableIndex = 0; // init
             storeParmsToTmpTable(np);
             int hoisting = tmpTableIndex;
@@ -379,7 +390,7 @@ void traverseAST(struct Node *np) {
             }
             np->num = np->left->right->num;
             break;
-        case 'C': {
+        case AST_CALL_NAMED: {
             // pass function to be a param
             // np->left: f (X,X)
             // np->right: P
@@ -387,8 +398,8 @@ void traverseAST(struct Node *np) {
             // np->right->right: X // normal is P or n
             // np->right->left->left: f
             // np->right->left->right: X
-            if (np->right->left->data == 'C') {
-                np->right->left->data = 'n'; // Change 'C' to 'n', not Call anymore
+            if (np->right->left->data == AST_CALL_NAMED) {
+                np->right->left->data = AST_NUM; // Change AST_CALL_NAMED to AST_NUM, not Call anymore
                 np->right->left->num = searchTable(np->right->left->left->name, 0);
             }
             // ---------------------------------
@@ -413,7 +424,7 @@ void traverseAST(struct Node *np) {
             // no need to travel other nodes
             break;
         }
-        default: // 'A', 'E'
+        default: // AST_STMTS, AST_EXPRS
             traverseAST(np->left);
             traverseAST(np->mid);
             traverseAST(np->right);
@@ -432,12 +443,12 @@ void freeAST(struct Node* np) { // free with postorder
 void printAnswer(struct Node *np) {
     if (np == NULL) return;
     switch(np->data) {
-        case 'N':
+        case AST_PRINT_NUM:
             printAnswer(np->left);
             printAnswer(np->right);
             printf("%d\n", np->num);
             break;
-        case 'B':
+        case AST_PRINT_BOOL:
             printAnswer(np->left);
             printAnswer(np->right);
             if (np->num) {
@@ -496,25 +507,25 @@ void TopDownDebugger(struct Node *np) {
     }
 }
 %}
+
+
 %union {
-    char *s;
-    int f, b;
+    char *str;
+    int ival, bval;
     struct Node *np;
 }
 %token print_num mod print_bool and or not _if _define fun
-%token <f> number
-%token <b> bool_val
-%token <s> id
+%token <ival> number
+%token <bval> bool_val
+%token <str> id
 %type <np> PORGRAM STMT STMTS PRINT_STMT EXPS EXP NUM_OP LOG_OP
 %type <np> IF_EXP TEST_EXP THEN_EXP ELSE_EXP
 %type <np> DEF_STMT VARIABLE
 %type <np> FUN_EXP FUN_IDs FUN_BODY FUN_CALL PARAMS PARAM FUN_NAME VARIABLES
 %%
-
-
 PORGRAM         :   STMTS                                   { root = $1; }
                 ;
-STMTS           :   STMT STMTS                              { $$ = newNode($1, $2, 0, 'A'); }
+STMTS           :   STMT STMTS                              { $$ = newNode($1, $2, 0, AST_STMTS); }
                 |   STMT                                    { $$ = $1; }
                 ;
 
@@ -523,15 +534,15 @@ STMT            :   EXP                                     { $$ = $1; }
                 |   DEF_STMT                                { $$ = $1; }
                 ;
 
-PRINT_STMT      :   '(' print_num EXP ')'                   { $$ = newNode($3, NULL, $3->num, 'N'); }
-                |   '(' print_bool EXP ')'                  { $$ = newNode($3, NULL, $3->num, 'B'); }
+PRINT_STMT      :   '(' print_num EXP ')'                   { $$ = newNode($3, NULL, $3->num, AST_PRINT_NUM); }
+                |   '(' print_bool EXP ')'                  { $$ = newNode($3, NULL, $3->num, AST_PRINT_BOOL); }
                 ;
 
-EXPS            :   EXP EXPS                                { $$ = newNode($1, $2, 0, 'E'); }
+EXPS            :   EXP EXPS                                { $$ = newNode($1, $2, 0, AST_EXPRS); }
                 |   EXP                                     { $$ = $1; }
                 ;
-EXP             :   number                                  { $$ = newNode(NULL, NULL, $1, 'n'); }
-                |   bool_val                                { $$ = newNode(NULL, NULL, $1, 'b'); }
+EXP             :   number                                  { $$ = newNode(NULL, NULL, $1, AST_NUM); }
+                |   bool_val                                { $$ = newNode(NULL, NULL, $1, AST_BOOL); }
                 |   NUM_OP                                  { $$ = $1; }
                 |   LOG_OP                                  { $$ = $1; }
                 |   IF_EXP                                  { $$ = $1; }
@@ -555,9 +566,9 @@ LOG_OP          :   '(' and EXP EXPS ')'                    { $$ = newNode($3, $
                 |   '(' not EXP ')'                         { $$ = newNode($3, NULL, 0, '~'); }
                 ;
 
-DEF_STMT        :   '(' _define VARIABLE EXP ')'            { $$ = newNode($3, $4, 0, 'D'); }
+DEF_STMT        :   '(' _define VARIABLE EXP ')'            { $$ = newNode($3, $4, 0, AST_DEFINE); }
                 ;
-VARIABLE        :   id                                      { $$ = newNode(NULL, NULL, 0, 'V'); $$->name = $1; }
+VARIABLE        :   id                                      { $$ = newNode(NULL, NULL, 0, AST_VAR); $$->name = $1; }
                 ;
 
 IF_EXP          :   '(' _if TEST_EXP THEN_EXP ELSE_EXP ')'  { $$ = newNode($3, $5, 0, '?'); $$->mid = $4; }
@@ -569,41 +580,43 @@ THEN_EXP        :   EXP                                     { $$ = $1; }
 ELSE_EXP        :   EXP                                     { $$ = $1; }
                 ;
 
-FUN_EXP         :   '(' fun FUN_IDs FUN_BODY ')'            { $$ = newNode($3, $4, 0, 'F'); }
+FUN_EXP         :   '(' fun FUN_IDs FUN_BODY ')'            { $$ = newNode($3, $4, 0, AST_FUN); }
                 ;
 FUN_IDs         :   '(' VARIABLES ')'                       { $$ = $2; }
                 ;
-VARIABLES       :   VARIABLES VARIABLE                      { $$ = newNode($1, $2, 0, 'E'); }
-                |   /* empty */                             { $$ = newNode(NULL, NULL, 0, 'X'); }
+VARIABLES       :   VARIABLES VARIABLE                      { $$ = newNode($1, $2, 0, AST_EXPRS); }
+                |   /* empty */                             { $$ = newNode(NULL, NULL, 0, AST_FUN_NULL); }
                 ;
 
 FUN_BODY        :   EXP                                     { $$ = $1; }
                 ;
 
-FUN_CALL        :   '(' FUN_EXP PARAMS ')'                  { $$ = newNode($2, $3, 0, 'c'); }
-                |   '(' FUN_NAME PARAMS ')'                 { $$ = newNode($2, $3, 0, 'C'); }
+FUN_CALL        :   '(' FUN_EXP PARAMS ')'                  { $$ = newNode($2, $3, 0, AST_CALL_ANONYNOUS); }
+                |   '(' FUN_NAME PARAMS ')'                 { $$ = newNode($2, $3, 0, AST_CALL_NAMED); }
                 ;
-PARAMS          :   PARAM PARAMS                            { $$ = newNode($1, $2, 0, 'P'); }
-                |   /* empty */                             { $$ = newNode(NULL, NULL, 0, 'X'); }
+PARAMS          :   PARAM PARAMS                            { $$ = newNode($1, $2, 0, AST_EXPRS); }
+                |   /* empty */                             { $$ = newNode(NULL, NULL, 0, AST_FUN_NULL); }
                 ;
 PARAM           :   EXP                                     { $$ = $1; }
                 ;
-FUN_NAME        :   id                                      { $$ = newNode(NULL, NULL, 0, 'f'); $$->name = $1; }
+FUN_NAME        :   id                                      { $$ = newNode(NULL, NULL, 0, AST_FUN_NAME); $$->name = $1; }
                 ;
 %%
+
+
 int main(int argc, char *argv[]) {
     yyin = fopen(argv[1], "r");
     int a = yyparse();
     fclose(yyin);
 
-    // if(a == 0) {
-    // TopDownDebugger(root);
+    if(a == 0) {
+        // TopDownDebugger(root);
         traverseAST(root);
         printAnswer(root);
         freeAST(root);
-    // } else {
-    //     /* yyerror() */
-    // }
+    } else {
+        /* yyerror() */
+    }
 
     // printf("\nVariables Table:\n");
     // int i;
