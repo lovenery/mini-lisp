@@ -31,9 +31,9 @@ struct Node {
 struct Node *root;
 int funNodesIndex = 0;
 struct Node *funNodes[100]; // store functions node
-struct Node *newNode(struct Node *npLeft, struct Node *npRight, int num, char d) {
+struct Node *newNode(struct Node *npLeft, struct Node *npRight, char d) {
     struct Node *np = (struct Node *) malloc( sizeof(struct Node) );
-    np->num = num;
+    np->num = 0;
     np->data = d;
     np->left = npLeft;
     np->right = npRight;
@@ -525,7 +525,7 @@ void TopDownDebugger(struct Node *np) {
 %%
 PORGRAM         :   STMTS                                   { root = $1; }
                 ;
-STMTS           :   STMT STMTS                              { $$ = newNode($1, $2, 0, AST_STMTS); }
+STMTS           :   STMT STMTS                              { $$ = newNode($1, $2, AST_STMTS); }
                 |   STMT                                    { $$ = $1; }
                 ;
 
@@ -534,15 +534,15 @@ STMT            :   EXP                                     { $$ = $1; }
                 |   DEF_STMT                                { $$ = $1; }
                 ;
 
-PRINT_STMT      :   '(' print_num EXP ')'                   { $$ = newNode($3, NULL, $3->num, AST_PRINT_NUM); }
-                |   '(' print_bool EXP ')'                  { $$ = newNode($3, NULL, $3->num, AST_PRINT_BOOL); }
+PRINT_STMT      :   '(' print_num EXP ')'                   { $$ = newNode($3, NULL, AST_PRINT_NUM); $$->num = $3->num; }
+                |   '(' print_bool EXP ')'                  { $$ = newNode($3, NULL, AST_PRINT_BOOL); $$->num = $3->num; }
                 ;
 
-EXPS            :   EXP EXPS                                { $$ = newNode($1, $2, 0, AST_EXPRS); }
+EXPS            :   EXP EXPS                                { $$ = newNode($1, $2, AST_EXPRS); }
                 |   EXP                                     { $$ = $1; }
                 ;
-EXP             :   number                                  { $$ = newNode(NULL, NULL, $1, AST_NUM); }
-                |   bool_val                                { $$ = newNode(NULL, NULL, $1, AST_BOOL); }
+EXP             :   number                                  { $$ = newNode(NULL, NULL, AST_NUM); $$->num = $1; }
+                |   bool_val                                { $$ = newNode(NULL, NULL, AST_BOOL); $$->num = $1; }
                 |   NUM_OP                                  { $$ = $1; }
                 |   LOG_OP                                  { $$ = $1; }
                 |   IF_EXP                                  { $$ = $1; }
@@ -551,27 +551,27 @@ EXP             :   number                                  { $$ = newNode(NULL,
                 |   FUN_CALL                                { $$ = $1; }
                 ;
 
-NUM_OP          :   '(' '+' EXPS ')'                        { $$ = newNode($3, NULL, 0, '+'); }
-                |   '(' '-' EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '-'); }
-                |   '(' '*' EXPS ')'                        { $$ = newNode($3, NULL, 0, '*'); }
-                |   '(' '/' EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '/'); }
-                |   '(' mod EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '%'); }
-                |   '(' '>' EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '>'); }
-                |   '(' '<' EXP EXP  ')'                    { $$ = newNode($3, $4, 0, '<'); }
-                |   '(' '=' EXPS ')'                        { $$ = newNode($3, NULL, 0, '='); }
+NUM_OP          :   '(' '+' EXPS ')'                        { $$ = newNode($3, NULL, '+'); }
+                |   '(' '-' EXP EXP  ')'                    { $$ = newNode($3, $4, '-'); }
+                |   '(' '*' EXPS ')'                        { $$ = newNode($3, NULL, '*'); }
+                |   '(' '/' EXP EXP  ')'                    { $$ = newNode($3, $4, '/'); }
+                |   '(' mod EXP EXP  ')'                    { $$ = newNode($3, $4, '%'); }
+                |   '(' '>' EXP EXP  ')'                    { $$ = newNode($3, $4, '>'); }
+                |   '(' '<' EXP EXP  ')'                    { $$ = newNode($3, $4, '<'); }
+                |   '(' '=' EXPS ')'                        { $$ = newNode($3, NULL, '='); }
                 ;
 
-LOG_OP          :   '(' and EXP EXPS ')'                    { $$ = newNode($3, $4, 0, '&'); }
-                |   '(' or EXP EXPS ')'                     { $$ = newNode($3, $4, 0, '|'); }
-                |   '(' not EXP ')'                         { $$ = newNode($3, NULL, 0, '~'); }
+LOG_OP          :   '(' and EXP EXPS ')'                    { $$ = newNode($3, $4, '&'); }
+                |   '(' or EXP EXPS ')'                     { $$ = newNode($3, $4, '|'); }
+                |   '(' not EXP ')'                         { $$ = newNode($3, NULL, '~'); }
                 ;
 
-DEF_STMT        :   '(' _define VARIABLE EXP ')'            { $$ = newNode($3, $4, 0, AST_DEFINE); }
+DEF_STMT        :   '(' _define VARIABLE EXP ')'            { $$ = newNode($3, $4, AST_DEFINE); }
                 ;
-VARIABLE        :   id                                      { $$ = newNode(NULL, NULL, 0, AST_VAR); $$->name = $1; }
+VARIABLE        :   id                                      { $$ = newNode(NULL, NULL, AST_VAR); $$->name = $1; }
                 ;
 
-IF_EXP          :   '(' _if TEST_EXP THEN_EXP ELSE_EXP ')'  { $$ = newNode($3, $5, 0, '?'); $$->mid = $4; }
+IF_EXP          :   '(' _if TEST_EXP THEN_EXP ELSE_EXP ')'  { $$ = newNode($3, $5, '?'); $$->mid = $4; }
                 ;
 TEST_EXP        :   EXP                                     { $$ = $1; }
                 ;
@@ -580,26 +580,26 @@ THEN_EXP        :   EXP                                     { $$ = $1; }
 ELSE_EXP        :   EXP                                     { $$ = $1; }
                 ;
 
-FUN_EXP         :   '(' fun FUN_IDs FUN_BODY ')'            { $$ = newNode($3, $4, 0, AST_FUN); }
+FUN_EXP         :   '(' fun FUN_IDs FUN_BODY ')'            { $$ = newNode($3, $4, AST_FUN); }
                 ;
 FUN_IDs         :   '(' VARIABLES ')'                       { $$ = $2; }
                 ;
-VARIABLES       :   VARIABLES VARIABLE                      { $$ = newNode($1, $2, 0, AST_EXPRS); }
-                |   /* empty */                             { $$ = newNode(NULL, NULL, 0, AST_FUN_NULL); }
+VARIABLES       :   VARIABLES VARIABLE                      { $$ = newNode($1, $2, AST_EXPRS); }
+                |   /* empty */                             { $$ = newNode(NULL, NULL, AST_FUN_NULL); }
                 ;
 
 FUN_BODY        :   EXP                                     { $$ = $1; }
                 ;
 
-FUN_CALL        :   '(' FUN_EXP PARAMS ')'                  { $$ = newNode($2, $3, 0, AST_CALL_ANONYNOUS); }
-                |   '(' FUN_NAME PARAMS ')'                 { $$ = newNode($2, $3, 0, AST_CALL_NAMED); }
+FUN_CALL        :   '(' FUN_EXP PARAMS ')'                  { $$ = newNode($2, $3, AST_CALL_ANONYNOUS); }
+                |   '(' FUN_NAME PARAMS ')'                 { $$ = newNode($2, $3, AST_CALL_NAMED); }
                 ;
-PARAMS          :   PARAM PARAMS                            { $$ = newNode($1, $2, 0, AST_EXPRS); }
-                |   /* empty */                             { $$ = newNode(NULL, NULL, 0, AST_FUN_NULL); }
+PARAMS          :   PARAM PARAMS                            { $$ = newNode($1, $2, AST_EXPRS); }
+                |   /* empty */                             { $$ = newNode(NULL, NULL, AST_FUN_NULL); }
                 ;
 PARAM           :   EXP                                     { $$ = $1; }
                 ;
-FUN_NAME        :   id                                      { $$ = newNode(NULL, NULL, 0, AST_FUN_NAME); $$->name = $1; }
+FUN_NAME        :   id                                      { $$ = newNode(NULL, NULL, AST_FUN_NAME); $$->name = $1; }
                 ;
 %%
 
