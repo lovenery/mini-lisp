@@ -1,5 +1,12 @@
 # Mini Lisp Interpreter
 
+## ENV
+
+- Test on OS X 10.11.6
+- flex (lex)
+- bison (yacc)
+- gcc (Xcode)
+
 ## TODO
 
 - Please check ref/*.pdf
