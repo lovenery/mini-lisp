@@ -444,14 +444,10 @@ void printAnswer(struct Node *np) {
     if (np == NULL) return;
     switch(np->data) {
         case AST_PRINT_NUM:
-            printAnswer(np->left);
-            printAnswer(np->right);
-            printf("%d\n", np->num);
+            printf("%d\n", np->left->num);
             break;
         case AST_PRINT_BOOL:
-            printAnswer(np->left);
-            printAnswer(np->right);
-            if (np->num) {
+            if (np->left->num) {
                 printf("#t\n");
             } else {
                 printf("#f\n");
@@ -534,8 +530,8 @@ STMT            :   EXP                                     { $$ = $1; }
                 |   DEF_STMT                                { $$ = $1; }
                 ;
 
-PRINT_STMT      :   '(' print_num EXP ')'                   { $$ = newNode($3, NULL, AST_PRINT_NUM); $$->num = $3->num; }
-                |   '(' print_bool EXP ')'                  { $$ = newNode($3, NULL, AST_PRINT_BOOL); $$->num = $3->num; }
+PRINT_STMT      :   '(' print_num EXP ')'                   { $$ = newNode($3, NULL, AST_PRINT_NUM); }
+                |   '(' print_bool EXP ')'                  { $$ = newNode($3, NULL, AST_PRINT_BOOL); }
                 ;
 
 EXPS            :   EXP EXPS                                { $$ = newNode($1, $2, AST_EXPRS); }
