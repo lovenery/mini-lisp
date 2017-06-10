@@ -349,6 +349,7 @@ void traverseAST(struct Node *np) {
             if (np->right->data == AST_FUN && np->right->left->data == AST_FUN_NULL) {
                 var_table[var_table_index].name = np->left->name; // V
                 var_table[var_table_index].value = np->right->right->num; // EXP
+                var_table[var_table_index].inFun = 0; // case AST_CALL_ANONYNOUS will make inFun=1
                 var_table_index++;
             } else if (np->right->data == AST_FUN) { // normal function
                 funNodes[funNodesIndex++] = np;
